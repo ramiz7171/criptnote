@@ -59,7 +59,7 @@ export const AI_LIMITS = {
 } as const
 
 function todayKey(feature: string, userId: string): string {
-  return `criptnote-${feature}-${userId}-${new Date().toISOString().slice(0, 10)}`
+  return `criptnote-${feature}-${userId}-${new Date().getFullYear()}`
 }
 
 export function getDailyUsage(feature: string, userId: string, limit: number): { used: number; remaining: number } {
