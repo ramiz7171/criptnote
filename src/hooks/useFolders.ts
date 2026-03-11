@@ -89,6 +89,7 @@ export function useFolders() {
 
   const deleteFolder = async (id: string) => {
     setFolders(prev => prev.filter(f => f.id !== id))
+    await supabase.from('notes').delete().eq('folder_id', id)
     const { error } = await supabase.from('folders').delete().eq('id', id)
     if (error) fetchFolders()
     return { error }
