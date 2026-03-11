@@ -49,13 +49,13 @@ export async function fixCode(code: string, language: string): Promise<string> {
 
 // ── Daily usage limits ──
 export const AI_LIMITS = {
-  summarize: { daily: 20, maxChars: 10_000 },
-  grammar: { daily: 20, maxChars: 5_000 },
-  codefix: { daily: 150, unit: 'lines' as const },
-  transcript: { daily: 10 },
-  meeting_notes: { daily: 10 },
-  action_items: { daily: 15 },
-  ai_writer: { daily: 15, maxChars: 5_000 },
+  summarize: { daily: 2, maxChars: 10_000 },
+  grammar: { daily: 2, maxChars: 5_000 },
+  codefix: { daily: 2 },
+  transcript: { daily: 2 },
+  meeting_notes: { daily: 2 },
+  action_items: { daily: 2 },
+  ai_writer: { daily: 2, maxChars: 5_000 },
 } as const
 
 function todayKey(feature: string, userId: string): string {
@@ -76,7 +76,7 @@ export function addDailyUsage(feature: string, userId: string, amount: number): 
 
 // Backward-compatible aliases for code fix
 export function getCodeFixUsage(userId: string) { return getDailyUsage('codefix', userId, AI_LIMITS.codefix.daily) }
-export function addCodeFixUsage(userId: string, lines: number) { addDailyUsage('codefix', userId, lines) }
+export function addCodeFixUsage(userId: string) { addDailyUsage('codefix', userId, 1) }
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {

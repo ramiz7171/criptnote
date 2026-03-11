@@ -181,7 +181,7 @@ export default function MeetingDetailModal({ meeting, onUpdate, onDelete, onClos
     if (!isAdmin) {
       const { remaining } = getDailyUsage('meeting_notes', user.id, AI_LIMITS.meeting_notes.daily)
       if (remaining <= 0) {
-        setAiError('Daily AI notes limit reached. Try again tomorrow.')
+        setAiError('✨ Premium coming soon — upgrade for unlimited AI')
         return
       }
     }
@@ -214,7 +214,7 @@ export default function MeetingDetailModal({ meeting, onUpdate, onDelete, onClos
     if (!isAdmin) {
       const { remaining } = getDailyUsage('meeting_notes', user.id, AI_LIMITS.meeting_notes.daily)
       if (remaining <= 0) {
-        setAiError('Daily AI limit reached. Try again tomorrow.')
+        setAiError('✨ Premium coming soon — upgrade for unlimited AI')
         return
       }
     }
@@ -261,7 +261,7 @@ export default function MeetingDetailModal({ meeting, onUpdate, onDelete, onClos
     if (!isAdmin) {
       const { remaining } = getDailyUsage('transcript', user.id, AI_LIMITS.transcript.daily)
       if (remaining <= 0) {
-        setAiError('Daily transcription limit reached.')
+        setAiError('✨ Premium coming soon — upgrade for unlimited AI')
         setTranscribing(false)
         return
       }

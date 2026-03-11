@@ -539,7 +539,7 @@ function EditorToolbarInner({ editor, title, noteType }: EditorToolbarProps) {
               }}
               disabled={busy}
               className={`${btn(false)} flex items-center gap-1 text-xs px-2 font-medium ${summarizing ? 'opacity-50 cursor-wait' : ''} ${noUses ? 'opacity-40' : ''}`}
-              title={!AI_KEY_CONFIGURED ? 'AI key not configured' : isAdmin ? 'Summarize (unlimited)' : noUses ? 'Daily limit reached (20/day)' : `Summarize (${sumUsage.remaining} left today)`}
+              title={!AI_KEY_CONFIGURED ? 'AI key not configured' : isAdmin ? 'Summarize (unlimited)' : noUses ? '✨ Premium coming soon' : `Summarize (${sumUsage.remaining} left today)`}
             >
               {summarizing ? (
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -593,7 +593,7 @@ function EditorToolbarInner({ editor, title, noteType }: EditorToolbarProps) {
               }}
               disabled={busy}
               className={`${btn(false)} flex items-center gap-1 text-xs px-2 font-medium ${fixingGrammar ? 'opacity-50 cursor-wait' : ''} ${!hasText ? 'opacity-40' : ''}`}
-              title={!AI_KEY_CONFIGURED ? 'AI key not configured' : isAdmin ? 'Fix Grammar (unlimited)' : noUses ? 'Daily limit reached (20/day)' : `Fix Grammar (${gramUsage.remaining} left today)`}
+              title={!AI_KEY_CONFIGURED ? 'AI key not configured' : isAdmin ? 'Fix Grammar (unlimited)' : noUses ? '✨ Premium coming soon' : `Fix Grammar (${gramUsage.remaining} left today)`}
             >
               {fixingGrammar ? (
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -611,24 +611,22 @@ function EditorToolbarInner({ editor, title, noteType }: EditorToolbarProps) {
 
         {/* ── AI Fix Code (only for programming language note types) ── */}
         {CODE_TYPES.includes(noteType) && (() => {
-          const usage = user ? getCodeFixUsage(user.id) : { used: 0, remaining: 0 }
+          const usage = user ? getCodeFixUsage(user.id) : { remaining: 0 }
+          const noUses = !isAdmin && usage.remaining <= 0
           const anyBusy = fixingCode || summarizing || fixingGrammar
           return (
             <button
               onClick={async () => {
                 if (!AI_KEY_CONFIGURED) { setAiError('AI key missing — redeploy with VITE_GEMINI_API_KEY'); setTimeout(() => setAiError(null), 8000); return }
                 if (!user) { setAiError('Not signed in'); setTimeout(() => setAiError(null), 4000); return }
-                if (!hasText || anyBusy) return
+                if (!hasText || anyBusy || noUses) return
                 const freshText = editor.getText()
-                const lineCount = freshText.trim() ? freshText.split('\n').length : 0
-                const overLimit = !isAdmin && lineCount > usage.remaining
-                if (overLimit) { setAiError(`Daily limit: ${usage.remaining} lines remaining (${lineCount} lines)`); setTimeout(() => setAiError(null), 4000); return }
                 setFixingCode(true)
                 setAiError(null)
                 try {
                   const fixed = await fixCode(freshText, noteType)
                   editor.commands.setContent(fixed)
-                  if (!isAdmin) addCodeFixUsage(user.id, lineCount)
+                  if (!isAdmin) addCodeFixUsage(user.id)
                 } catch (err: any) {
                   console.error('[AI CodeFix]', err)
                   const msg = err?.message || ''
@@ -639,8 +637,8 @@ function EditorToolbarInner({ editor, title, noteType }: EditorToolbarProps) {
                 }
               }}
               disabled={anyBusy}
-              className={`${btn(false)} flex items-center gap-1 text-xs px-2 font-medium ${fixingCode ? 'opacity-50 cursor-wait' : ''} ${!hasText ? 'opacity-40' : ''}`}
-              title={!AI_KEY_CONFIGURED ? 'AI key not configured' : isAdmin ? 'Fix Code (unlimited)' : `Fix Code (${usage.remaining} lines remaining today)`}
+              className={`${btn(false)} flex items-center gap-1 text-xs px-2 font-medium ${fixingCode ? 'opacity-50 cursor-wait' : ''} ${!hasText || noUses ? 'opacity-40' : ''}`}
+              title={!AI_KEY_CONFIGURED ? 'AI key not configured' : isAdmin ? 'Fix Code (unlimited)' : noUses ? '✨ Premium coming soon' : `Fix Code (${usage.remaining} left today)`}
             >
               {fixingCode ? (
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -650,7 +648,7 @@ function EditorToolbarInner({ editor, title, noteType }: EditorToolbarProps) {
                 </svg>
               )}
               <span>{fixingCode ? 'Fixing...' : `Fix Code`}</span>
-              {!isAdmin && <span className="text-[10px] text-gray-400 dark:text-gray-500">({usage.remaining})</span>}
+              {!isAdmin && <span className={`text-[10px] ${noUses ? 'text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>({usage.remaining})</span>}
               {isAdmin && <span className="text-[10px] text-amber-500">∞</span>}
             </button>
           )

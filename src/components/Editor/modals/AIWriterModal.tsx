@@ -42,6 +42,7 @@ export default function AIWriterModal({ editor, onClose }: AIWriterModalProps) {
   const handleGenerate = async () => {
     if (!AI_KEY_CONFIGURED) { setError('AI key missing — redeploy with VITE_GEMINI_API_KEY env var'); return }
     if (!user) { setError('Not signed in'); return }
+    if (noUses) { setError('✨ Premium coming soon — upgrade for unlimited AI'); return }
     if (generating || !canGenerate) return
     setGenerating(true)
     setError('')

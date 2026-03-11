@@ -70,7 +70,7 @@ export default function TranscriptViewer({ transcript, onUpdate, onDelete }: Tra
     if (!isAdmin) {
       const { remaining } = getDailyUsage('transcript', user.id, AI_LIMITS.transcript.daily)
       if (remaining <= 0) {
-        setError('Daily summary limit reached. Try again tomorrow.')
+        setError('✨ Premium coming soon — upgrade for unlimited AI')
         setTimeout(() => setError(null), 4000)
         return
       }
@@ -100,7 +100,7 @@ export default function TranscriptViewer({ transcript, onUpdate, onDelete }: Tra
     if (!isAdmin) {
       const { remaining } = getDailyUsage('action_items', user.id, AI_LIMITS.action_items.daily)
       if (remaining <= 0) {
-        setError('Daily action items limit reached. Try again tomorrow.')
+        setError('✨ Premium coming soon — upgrade for unlimited AI')
         setTimeout(() => setError(null), 4000)
         return
       }
