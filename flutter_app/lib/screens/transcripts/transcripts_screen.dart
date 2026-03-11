@@ -4,8 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../providers/transcripts_provider.dart';
 import '../../models/transcript.dart';
+import '../../services/gemini_service.dart';
 
 class TranscriptsScreen extends ConsumerStatefulWidget {
   const TranscriptsScreen({super.key});
@@ -23,7 +25,12 @@ class _TranscriptsScreenState extends ConsumerState<TranscriptsScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Microphone permission required')));
       return;
     }
-    showModalBottomSheet(context: context, isScrollControlled: true, builder: (_) => _RecordSheet(notifier: ref.read(transcriptsProvider.notifier)));
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _RecordSheet(notifier: ref.read(transcriptsProvider.notifier)),
+    );
   }
 
   @override
@@ -47,17 +54,26 @@ class _TranscriptsScreenState extends ConsumerState<TranscriptsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: TextField(
-              decoration: const InputDecoration(hintText: 'Search transcripts...', prefixIcon: Icon(Icons.search, size: 20), contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
+              decoration: const InputDecoration(
+                hintText: 'Search transcripts...',
+                prefixIcon: Icon(Icons.search, size: 20),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
               onChanged: (v) => setState(() => _search = v),
             ),
           ),
           Expanded(
             child: filtered.isEmpty
-                ? const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.mic_none, size: 64, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text('No transcripts yet', style: TextStyle(color: Colors.grey)),
-                  ]))
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.mic_none, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text('No transcripts yet', style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: filtered.length,
@@ -80,7 +96,10 @@ class _TranscriptsScreenState extends ConsumerState<TranscriptsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _TranscriptDetailSheet(transcript: transcript, notifier: ref.read(transcriptsProvider.notifier)),
+      builder: (_) => _TranscriptDetailSheet(
+        transcript: transcript,
+        notifier: ref.read(transcriptsProvider.notifier),
+      ),
     );
   }
 }
@@ -108,20 +127,29 @@ class _TranscriptCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         onTap: onTap,
-        leading: CircleAvatar(backgroundColor: _statusColor.withOpacity(0.15), child: Icon(Icons.mic, color: _statusColor, size: 20)),
+        leading: CircleAvatar(
+          backgroundColor: _statusColor.withValues(alpha: 0.15),
+          child: Icon(Icons.mic, color: _statusColor, size: 20),
+        ),
         title: Text(transcript.title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(date, style: const TextStyle(fontSize: 12)),
-          if (transcript.durationSeconds > 0) Text(transcript.durationFormatted, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          if (transcript.durationSeconds > 0)
+            Text(transcript.durationFormatted, style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ]),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: _statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: _statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Text(transcript.status.value, style: TextStyle(fontSize: 11, color: _statusColor)),
           ),
           PopupMenuButton<String>(
-            itemBuilder: (_) => [const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red)))],
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+            ],
             onSelected: (_) => onDelete(),
           ),
         ]),
@@ -149,14 +177,26 @@ class _TranscriptDetailSheet extends StatelessWidget {
           children: [
             Text(transcript.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text(DateFormat('EEEE, MMMM d, yyyy').format(DateTime.parse(transcript.createdAt)), style: const TextStyle(color: Colors.grey)),
-            if (transcript.durationSeconds > 0) Text(transcript.durationFormatted, style: const TextStyle(color: Colors.grey)),
+            Text(
+              DateFormat('EEEE, MMMM d, yyyy').format(DateTime.parse(transcript.createdAt)),
+              style: const TextStyle(color: Colors.grey),
+            ),
+            if (transcript.durationSeconds > 0)
+              Text(transcript.durationFormatted, style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 16),
 
             if (transcript.summary.isNotEmpty) ...[
               const Text('Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
-              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.blue.withOpacity(0.05), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.withOpacity(0.2))), child: Text(transcript.summary)),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                ),
+                child: Text(transcript.summary),
+              ),
               const SizedBox(height: 16),
             ],
 
@@ -205,8 +245,10 @@ class _RecordSheet extends StatefulWidget {
 class _RecordSheetState extends State<_RecordSheet> {
   final _recorder = AudioRecorder();
   bool _isRecording = false;
+  bool _isProcessing = false;
   int _seconds = 0;
   String? _recordingPath;
+  String? _error;
 
   @override
   void dispose() {
@@ -218,7 +260,7 @@ class _RecordSheetState extends State<_RecordSheet> {
     final dir = await getTemporaryDirectory();
     _recordingPath = '${dir.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
     await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: _recordingPath!);
-    setState(() { _isRecording = true; _seconds = 0; });
+    setState(() { _isRecording = true; _seconds = 0; _error = null; });
     _tick();
   }
 
@@ -229,20 +271,53 @@ class _RecordSheetState extends State<_RecordSheet> {
     }
   }
 
-  Future<void> _stopAndSave() async {
+  Future<void> _stopAndTranscribe() async {
     await _recorder.stop();
-    setState(() => _isRecording = false);
+    setState(() { _isRecording = false; _isProcessing = true; });
 
-    if (_recordingPath == null) return;
+    if (_recordingPath == null) {
+      setState(() { _isProcessing = false; _error = 'No recording found'; });
+      return;
+    }
 
-    // Create transcript in DB
-    await widget.notifier.createTranscript(
-      title: 'Recording ${DateFormat('MMM d, HH:mm').format(DateTime.now())}',
-      status: 'processing',
-      durationSeconds: _seconds,
-    );
+    final title = 'Recording ${DateFormat('MMM d, HH:mm').format(DateTime.now())}';
+    final audioFile = File(_recordingPath!);
 
-    if (mounted) Navigator.pop(context);
+    try {
+      final audioBytes = await audioFile.readAsBytes();
+
+      // Create transcript record with 'processing' status
+      final transcript = await widget.notifier.createTranscript(
+        title: title,
+        status: 'processing',
+        durationSeconds: _seconds,
+      );
+
+      if (transcript != null) {
+        // Transcribe via Gemini AI
+        final result = await GeminiService.transcribeAudio(audioBytes, 'audio/m4a');
+
+        if (result != null) {
+          await widget.notifier.updateTranscript(transcript.id, {
+            'status': 'completed',
+            'transcript_text': result['transcript'] ?? '',
+            'summary': result['summary'] ?? '',
+            'action_items': result['actionItems'] ?? '',
+          });
+        } else {
+          await widget.notifier.updateTranscript(transcript.id, {'status': 'failed'});
+          setState(() => _error = 'Transcription failed — check your AI connection');
+        }
+      }
+    } catch (e) {
+      setState(() => _error = 'Error: $e');
+    } finally {
+      // Cleanup temp file
+      try { await audioFile.delete(); } catch (_) {}
+      setState(() => _isProcessing = false);
+    }
+
+    if (mounted && _error == null) Navigator.pop(context);
   }
 
   String get _timerText {
@@ -254,28 +329,50 @@ class _RecordSheetState extends State<_RecordSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.only(
+        left: 32,
+        right: 32,
+        top: 32,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text('Voice Recording', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 32),
-          Text(_timerText, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w300, fontFamily: 'monospace')),
+          Text(
+            _timerText,
+            style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w300, fontFamily: 'monospace'),
+          ),
           const SizedBox(height: 32),
-          if (!_isRecording)
+
+          if (_isProcessing) ...[
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            const Text('Transcribing with AI...', style: TextStyle(color: Colors.grey)),
+          ] else if (!_isRecording)
             ElevatedButton.icon(
               onPressed: _startRecording,
               icon: const Icon(Icons.mic),
               label: const Text('Start Recording'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, minimumSize: const Size(200, 50)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(200, 50),
+              ),
             )
           else
             ElevatedButton.icon(
-              onPressed: _stopAndSave,
+              onPressed: _stopAndTranscribe,
               icon: const Icon(Icons.stop),
-              label: const Text('Stop & Save'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, foregroundColor: Colors.white, minimumSize: const Size(200, 50)),
+              label: const Text('Stop & Transcribe'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(200, 50),
+              ),
             ),
+
           const SizedBox(height: 16),
           if (_isRecording)
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -283,6 +380,12 @@ class _RecordSheetState extends State<_RecordSheet> {
               const SizedBox(width: 8),
               const Text('Recording...', style: TextStyle(color: Colors.red)),
             ]),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12), textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          ],
         ],
       ),
     );

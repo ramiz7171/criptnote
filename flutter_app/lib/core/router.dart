@@ -13,13 +13,25 @@ import '../screens/transcripts/transcripts_screen.dart';
 import '../screens/dashboard/note_editor_screen.dart';
 import '../widgets/security/lock_screen.dart';
 
+// ChangeNotifier that listens to auth + security state, used as GoRouter refreshListenable
+class _RouterRefreshNotifier extends ChangeNotifier {
+  _RouterRefreshNotifier(Ref ref) {
+    ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
+    ref.listen<SecurityState>(securityProvider, (_, __) => notifyListeners());
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  final securityState = ref.watch(securityProvider);
+  final notifier = _RouterRefreshNotifier(ref);
+  ref.onDispose(notifier.dispose);
 
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: '/dashboard',
+    refreshListenable: notifier,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
+      final securityState = ref.read(securityProvider);
+
       final isAuth = authState.user != null;
       final isLoading = authState.loading;
       final isMfaRequired = authState.mfaRequired;
@@ -27,8 +39,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (isLoading) return null;
 
-      final isAuthRoute = state.matchedLocation.startsWith('/auth');
-      final isLockRoute = state.matchedLocation == '/lock';
+      final loc = state.matchedLocation;
+      final isAuthRoute = loc.startsWith('/auth');
+      final isLockRoute = loc == '/lock';
 
       if (!isAuth && !isAuthRoute) return '/auth';
       if (isAuth && isAuthRoute && !isMfaRequired) return '/dashboard';
@@ -37,10 +50,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/',
-        redirect: (_, __) => '/dashboard',
-      ),
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthScreen(),
@@ -98,9 +107,7 @@ class MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
-  int _selectedIndex = 0;
-
-  final _destinations = [
+  static const _destinations = [
     (path: '/dashboard', icon: Icons.note_alt_outlined, activeIcon: Icons.note_alt, label: 'Notes'),
     (path: '/board', icon: Icons.draw_outlined, activeIcon: Icons.draw, label: 'Board'),
     (path: '/meetings', icon: Icons.calendar_today_outlined, activeIcon: Icons.calendar_today, label: 'Meetings'),
@@ -109,12 +116,19 @@ class _MainShellState extends ConsumerState<MainShell> {
     (path: '/settings', icon: Icons.settings_outlined, activeIcon: Icons.settings, label: 'Settings'),
   ];
 
+  int _selectedIndex = 0;
+
   @override
   Widget build(BuildContext context) {
+    // Sync bottom nav with actual route (handles programmatic navigation)
+    final location = GoRouterState.of(context).matchedLocation;
+    final routeIndex = _destinations.indexWhere((d) => location.startsWith(d.path));
+    final displayIndex = routeIndex >= 0 ? routeIndex : _selectedIndex;
+
     return Scaffold(
       body: widget.child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
+        selectedIndex: displayIndex,
         onDestinationSelected: (index) {
           setState(() => _selectedIndex = index);
           context.go(_destinations[index].path);

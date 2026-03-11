@@ -6,6 +6,7 @@ import '../../models/note.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/encryption_provider.dart';
 import '../../core/constants.dart';
+import '../../services/gemini_service.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -23,6 +24,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   Note? _note;
   bool _initialized = false;
   bool _saving = false;
+  bool _aiLoading = false;
   String _selectedColor = '#ffffff';
   DateTime? _expiresAt;
   DateTime? _scheduledAt;
@@ -173,6 +175,59 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (selected != null) setState(() => _selectedColor = selected);
   }
 
+  Future<void> _aiSummarize() async {
+    final text = _note!.noteType.isCode ? _codeController.text : _quillController.document.toPlainText();
+    if (text.trim().isEmpty) return;
+    setState(() => _aiLoading = true);
+    final result = await GeminiService.summarize(text);
+    setState(() => _aiLoading = false);
+    if (result != null && mounted) {
+      showDialog(context: context, builder: (_) => AlertDialog(
+        title: const Text('AI Summary'),
+        content: SingleChildScrollView(child: Text(result)),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      ));
+    }
+  }
+
+  Future<void> _aiFixGrammar() async {
+    final text = _quillController.document.toPlainText();
+    if (text.trim().isEmpty) return;
+    setState(() => _aiLoading = true);
+    final result = await GeminiService.checkGrammar(text);
+    setState(() => _aiLoading = false);
+    if (result != null && mounted) {
+      // Replace content with corrected text
+      final doc = quill.Document();
+      doc.insert(0, result);
+      setState(() {
+        _quillController = quill.QuillController(document: doc, selection: const TextSelection.collapsed(offset: 0));
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Grammar fixed by AI')));
+    }
+  }
+
+  Future<void> _aiFixCode() async {
+    final code = _codeController.text;
+    if (code.trim().isEmpty) return;
+    final language = {
+      NoteType.java: 'java', NoteType.javascript: 'javascript',
+      NoteType.python: 'python', NoteType.sql: 'sql',
+    }[_note!.noteType] ?? 'code';
+    setState(() => _aiLoading = true);
+    final result = await GeminiService.fixCode(code, language);
+    setState(() => _aiLoading = false);
+    if (result != null && mounted) {
+      // Strip markdown code fences if present
+      String clean = result;
+      final fence = RegExp(r'```\w*\n?([\s\S]*?)```');
+      final match = fence.firstMatch(clean);
+      if (match != null) clean = match.group(1) ?? clean;
+      setState(() => _codeController.text = clean.trim());
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code reviewed by AI')));
+    }
+  }
+
   Future<void> _pickExpiration() async {
     final date = await showDatePicker(
       context: context,
@@ -225,6 +280,25 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               label: Text('${_expiresAt!.month}/${_expiresAt!.day}', style: const TextStyle(fontSize: 12)),
               onPressed: () => setState(() => _expiresAt = null),
               style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            ),
+          if (_aiLoading)
+            const Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purple)))
+          else
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.auto_awesome, color: Colors.purple),
+              tooltip: 'AI',
+              itemBuilder: (_) => [
+                if (!isCode) ...[
+                  const PopupMenuItem(value: 'summarize', child: ListTile(leading: Icon(Icons.summarize), title: Text('Summarize'), dense: true)),
+                  const PopupMenuItem(value: 'grammar', child: ListTile(leading: Icon(Icons.spellcheck), title: Text('Fix Grammar'), dense: true)),
+                ] else
+                  const PopupMenuItem(value: 'fixcode', child: ListTile(leading: Icon(Icons.bug_report), title: Text('Fix Code'), dense: true)),
+              ],
+              onSelected: (v) {
+                if (v == 'summarize') _aiSummarize();
+                if (v == 'grammar') _aiFixGrammar();
+                if (v == 'fixcode') _aiFixCode();
+              },
             ),
           IconButton(icon: const Icon(Icons.color_lens_outlined), onPressed: _pickColor),
           IconButton(icon: const Icon(Icons.timer_outlined), onPressed: _pickExpiration),

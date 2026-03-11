@@ -63,7 +63,7 @@ class _FilesScreenState extends ConsumerState<FilesScreen> {
   Future<void> _createFolder() async {
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => _CreateFolderDialog(),
+      builder: (_) => const _CreateFolderDialog(),
     );
     if (name != null) {
       await ref.read(filesProvider.notifier).createFileFolder(name: name, parentFolderId: _currentFolderId);
@@ -382,15 +382,32 @@ class _FileListItem extends StatelessWidget {
   }
 }
 
-class _CreateFolderDialog extends StatelessWidget {
-  _CreateFolderDialog();
+class _CreateFolderDialog extends StatefulWidget {
+  const _CreateFolderDialog();
+
+  @override
+  State<_CreateFolderDialog> createState() => _CreateFolderDialogState();
+}
+
+class _CreateFolderDialogState extends State<_CreateFolderDialog> {
   final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('New Folder'),
-      content: TextField(controller: _controller, decoration: const InputDecoration(hintText: 'Folder name'), autofocus: true),
+      content: TextField(
+        controller: _controller,
+        decoration: const InputDecoration(hintText: 'Folder name'),
+        autofocus: true,
+        onSubmitted: (_) => Navigator.pop(context, _controller.text.trim()),
+      ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         ElevatedButton(onPressed: () => Navigator.pop(context, _controller.text.trim()), child: const Text('Create')),
